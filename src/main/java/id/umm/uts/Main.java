@@ -1,47 +1,48 @@
 package id.umm.uts;
 
-import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.FlatDarkLaf;
 import id.umm.uts.ds.DynamicArray;
 import id.umm.uts.io.CsvExporter;
 import id.umm.uts.io.CsvImporter;
 import id.umm.uts.model.Putusan;
 import id.umm.uts.service.PutusanService;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GridLayout;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
 import java.io.File;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 
 public class Main extends JFrame {
 
     private static final String ALL_TYPES = "Semua jenis";
 
+    private static final Color BG_DARK = new Color(15, 23, 42);
+    private static final Color BG_SIDEBAR = new Color(22, 30, 49);
+    private static final Color BG_CARD = new Color(30, 41, 59);
+    private static final Color BG_CARD_ALT = new Color(38, 50, 72);
+    private static final Color BORDER_COLOR = new Color(51, 65, 85);
+    private static final Color ACCENT_BLUE = new Color(37, 99, 235);
+    private static final Color TEXT_PRIMARY = new Color(248, 250, 252);
+    private static final Color TEXT_MUTED = new Color(148, 163, 184);
+
     private final PutusanService service = new PutusanService();
-    private final JTextArea textArea = new JTextArea();
-    private final JTextField caseIdField = new JTextField(12);
-    private final JTextField minSentenceField = new JTextField(7);
+    private DefaultTableModel tableModel;
+    private JTable dataTable;
+    private final JTextField searchField = new JTextField(15);
+    private final JTextField minSentenceField = new JTextField(6);
     private final JComboBox<String> typeFilter = new JComboBox<>();
 
+    private JLabel statTotalKasus;
+    private JLabel statKasusBulan;
+    private JLabel statJenisTeratas;
+    private JLabel statBanding;
+
     public Main() {
-        super("Aplikasi Arsip Putusan");
+        super("Sistem Manajemen Putusan Narkotika");
         initUI();
 
         DynamicArray<Putusan> dataAwal = DataDummy.getData();
@@ -49,83 +50,268 @@ public class Main extends JFrame {
             service.tambahPutusan(dataAwal.get(i));
         }
         refreshTypeChoices();
-        tampilkanDataKeLayar();
+        tampilkanDataKeTabel();
     }
 
     private void initUI() {
-        setSize(1100, 700);
+        setSize(1400, 920);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout(10, 10));
+        setLocationRelativeTo(null);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(BG_DARK);
 
         JPanel header = new JPanel(new BorderLayout());
-        header.setBorder(BorderFactory.createEmptyBorder(18, 22, 14, 22));
-        JLabel title = new JLabel("Sistem Arsip Putusan Narkotika");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        header.add(title, BorderLayout.CENTER);
-        add(header, BorderLayout.NORTH);
+        header.setBackground(BG_SIDEBAR);
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+                new EmptyBorder(14, 24, 14, 24)
+        ));
+        JLabel title = new JLabel("Sistem Manajemen Putusan Narkotika");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(TEXT_PRIMARY);
+        header.add(title, BorderLayout.WEST);
+        root.add(header, BorderLayout.NORTH);
 
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
-        sidebar.setBackground(new Color(242, 244, 247));
-        sidebar.setBorder(BorderFactory.createEmptyBorder(16, 12, 16, 12));
-        sidebar.setPreferredSize(new Dimension(190, 0));
-        addButton(sidebar, "Impor CSV", this::importCsv);
-        addButton(sidebar, "Ekspor CSV", this::exportCsv);
-        addButton(sidebar, "Tampilkan Data", this::tampilkanDataKeLayar);
-        addButton(sidebar, "Tambah Data", this::tambahData);
-        addButton(sidebar, "Hapus Data", this::hapusData);
-        addButton(sidebar, "Urutkan Vonis", this::urutkanData);
-        addButton(sidebar, "Agregasi", () -> textArea.setText(service.ringkasanAgregasi()));
-        addButton(sidebar, "Riwayat Audit", () -> textArea.setText(service.ringkasanRiwayatAudit()));
-        add(sidebar, BorderLayout.WEST);
+        sidebar.setBackground(BG_SIDEBAR);
+        sidebar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR),
+                new EmptyBorder(16, 12, 16, 12)
+        ));
+        sidebar.setPreferredSize(new Dimension(230, 0));
 
-        textArea.setEditable(false);
-        textArea.setLineWrap(true);
-        textArea.setWrapStyleWord(true);
-        textArea.setBackground(Color.WHITE);
-        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
-        textArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        JPanel content = new JPanel(new BorderLayout());
-        content.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 14));
-        content.add(new JScrollPane(textArea), BorderLayout.CENTER);
-        add(content, BorderLayout.CENTER);
+        addButton(sidebar, "Impor Data (CSV)", this::importCsv);
+        addButton(sidebar, "Ekspor Data (CSV)", this::exportCsv);
+        addButton(sidebar, "Dasbor & Analitik", this::tampilkanDataKeTabel);
+        addButton(sidebar, "Tambah Data Baru", this::tambahData);
+        addButton(sidebar, "Hapus Arsip Data", this::hapusData);
+        addButton(sidebar, "Agregasi & Statistik", this::tampilkanAgregasi);
+        addButton(sidebar, "Riwayat Audit", this::tampilkanRiwayatAudit);
+        root.add(sidebar, BorderLayout.WEST);
 
-        JPanel controls = new JPanel(new GridLayout(2, 1, 0, 4));
+        JPanel contentPanel = new JPanel(new BorderLayout(0, 12));
+        contentPanel.setBackground(BG_DARK);
+        contentPanel.setBorder(new EmptyBorder(16, 16, 16, 16));
+
+        JPanel statsPanel = new JPanel(new GridLayout(1, 4, 12, 0));
+        statsPanel.setOpaque(false);
+        statsPanel.setPreferredSize(new Dimension(0, 90));
+
+        statTotalKasus = new JLabel("0");
+        statKasusBulan = new JLabel("0");
+        statJenisTeratas = new JLabel("-");
+        statBanding = new JLabel("0");
+
+        statsPanel.add(createStatCard("Total Kasus", statTotalKasus, new Color(16, 185, 129)));
+        statsPanel.add(createStatCard("Kasus Aktif", statKasusBulan, new Color(59, 130, 246)));
+        statsPanel.add(createStatCard("Jenis Teratas", statJenisTeratas, new Color(245, 158, 11)));
+        statsPanel.add(createStatCard("Jatuh Tempo Banding", statBanding, new Color(239, 68, 68)));
+        contentPanel.add(statsPanel, BorderLayout.NORTH);
+
+        JPanel centerContainer = new JPanel(new BorderLayout(0, 10));
+        centerContainer.setOpaque(false);
+
+        JPanel controls = new JPanel(new BorderLayout());
+        controls.setBackground(BG_CARD);
         controls.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(8, 14, 14, 14),
-                BorderFactory.createTitledBorder("Pencarian dan Filter")));
-        JPanel searchControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+                new LineBorder(BORDER_COLOR, 1, true),
+                new EmptyBorder(10, 14, 10, 14)
+        ));
+
+        JPanel searchGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        searchGroup.setOpaque(false);
+        searchField.putClientProperty("JTextField.placeholderText", "Cari Case ID / Terdakwa...");
         JButton searchButton = new JButton("Cari");
+        searchButton.setBackground(ACCENT_BLUE);
+        searchButton.setForeground(Color.WHITE);
+        searchButton.setFocusPainted(false);
         searchButton.addActionListener(event -> runSafely(this::cariData));
-        caseIdField.putClientProperty("JTextField.placeholderText", "Cari Case ID...");
-        searchControls.add(new JLabel("Case ID:"));
-        searchControls.add(caseIdField);
-        searchControls.add(searchButton);
 
-        JPanel filterControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        JLabel lblCari = new JLabel("Pencarian:");
+        lblCari.setForeground(TEXT_PRIMARY);
+        searchGroup.add(lblCari);
+        searchGroup.add(searchField);
+        searchGroup.add(searchButton);
+
+        JPanel filterGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        filterGroup.setOpaque(false);
+        minSentenceField.putClientProperty("JTextField.placeholderText", "Min vonis");
         JButton filterButton = new JButton("Filter");
+        filterButton.setBackground(ACCENT_BLUE);
+        filterButton.setForeground(Color.WHITE);
+        filterButton.setFocusPainted(false);
         filterButton.addActionListener(event -> runSafely(this::filterData));
-        minSentenceField.putClientProperty("JTextField.placeholderText", "Minimal vonis");
-        filterControls.add(new JLabel("Jenis narkotika:"));
-        filterControls.add(typeFilter);
-        filterControls.add(new JLabel("Vonis minimum (bulan):"));
-        filterControls.add(minSentenceField);
-        filterControls.add(filterButton);
-        controls.add(searchControls);
-        controls.add(filterControls);
-        add(controls, BorderLayout.SOUTH);
 
-        setLocationRelativeTo(null);
+        JButton resetButton = new JButton("Reset");
+        resetButton.setBackground(BG_SIDEBAR);
+        resetButton.setForeground(TEXT_PRIMARY);
+        resetButton.setFocusPainted(false);
+        resetButton.addActionListener(event -> runSafely(this::tampilkanDataKeTabel));
+
+        JLabel lblJenis = new JLabel("Jenis:");
+        lblJenis.setForeground(TEXT_PRIMARY);
+        JLabel lblVonis = new JLabel("Min Vonis:");
+        lblVonis.setForeground(TEXT_PRIMARY);
+
+        filterGroup.add(lblJenis);
+        filterGroup.add(typeFilter);
+        filterGroup.add(Box.createHorizontalStrut(5));
+        filterGroup.add(lblVonis);
+        filterGroup.add(minSentenceField);
+        filterGroup.add(filterButton);
+        filterGroup.add(resetButton);
+
+        controls.add(searchGroup, BorderLayout.WEST);
+        controls.add(filterGroup, BorderLayout.EAST);
+        centerContainer.add(controls, BorderLayout.NORTH);
+
+        String[] columns = {"Case ID", "Nomor Perkara", "Terdakwa", "Jenis Narkotika", "Vonis (Bulan)", "Kategori", "Status", "Berat (Gram)"};
+        tableModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        dataTable = new JTable(tableModel);
+        dataTable.setBackground(BG_CARD);
+        dataTable.setForeground(TEXT_PRIMARY);
+        dataTable.setRowHeight(42);
+        dataTable.setShowVerticalLines(false);
+        dataTable.setGridColor(BORDER_COLOR);
+        dataTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        dataTable.getTableHeader().setBackground(BG_SIDEBAR);
+        dataTable.getTableHeader().setForeground(TEXT_MUTED);
+        dataTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        dataTable.getTableHeader().setPreferredSize(new Dimension(0, 42));
+
+        dataTable.getColumnModel().getColumn(0).setPreferredWidth(75);
+        dataTable.getColumnModel().getColumn(1).setPreferredWidth(250);
+        dataTable.getColumnModel().getColumn(2).setPreferredWidth(280);
+        dataTable.getColumnModel().getColumn(3).setPreferredWidth(110);
+        dataTable.getColumnModel().getColumn(4).setPreferredWidth(100);
+        dataTable.getColumnModel().getColumn(5).setPreferredWidth(100);
+        dataTable.getColumnModel().getColumn(6).setPreferredWidth(90);
+        dataTable.getColumnModel().getColumn(7).setPreferredWidth(100);
+
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        dataTable.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
+        dataTable.getColumnModel().getColumn(4).setCellRenderer(centerRenderer);
+
+        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
+        rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
+        dataTable.getColumnModel().getColumn(7).setCellRenderer(rightRenderer);
+
+        dataTable.getColumnModel().getColumn(5).setCellRenderer(new PillBadgeRenderer());
+        dataTable.getColumnModel().getColumn(6).setCellRenderer(new PillBadgeRenderer());
+
+        JScrollPane scrollPane = new JScrollPane(dataTable);
+        scrollPane.getViewport().setBackground(BG_CARD);
+        scrollPane.setBorder(new LineBorder(BORDER_COLOR, 1, true));
+        centerContainer.add(scrollPane, BorderLayout.CENTER);
+
+        contentPanel.add(centerContainer, BorderLayout.CENTER);
+        root.add(contentPanel, BorderLayout.CENTER);
+        setContentPane(root);
+    }
+
+    private JPanel createStatCard(String title, JLabel valueLabel, Color indicatorColor) {
+        JPanel card = new JPanel(new BorderLayout(8, 4));
+        card.setBackground(BG_CARD_ALT);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_COLOR, 1, true),
+                new EmptyBorder(12, 16, 12, 16)
+        ));
+
+        JPanel topBar = new JPanel(new BorderLayout());
+        topBar.setOpaque(false);
+        JLabel titleLbl = new JLabel(title);
+        titleLbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        titleLbl.setForeground(TEXT_MUTED);
+        topBar.add(titleLbl, BorderLayout.WEST);
+
+        JPanel indicator = new JPanel();
+        indicator.setBackground(indicatorColor);
+        indicator.setPreferredSize(new Dimension(8, 8));
+        topBar.add(indicator, BorderLayout.EAST);
+
+        card.add(topBar, BorderLayout.NORTH);
+
+        valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        valueLabel.setForeground(TEXT_PRIMARY);
+        card.add(valueLabel, BorderLayout.CENTER);
+
+        return card;
     }
 
     private void addButton(JPanel panel, String label, Runnable action) {
         JButton button = new JButton(label);
+        button.setHorizontalAlignment(SwingConstants.LEFT);
         button.addActionListener(event -> runSafely(action));
         button.setAlignmentX(LEFT_ALIGNMENT);
         button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        button.setPreferredSize(new Dimension(166, 40));
+        button.setPreferredSize(new Dimension(200, 40));
+        button.setBackground(BG_CARD);
+        button.setForeground(TEXT_PRIMARY);
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        button.setFocusPainted(false);
+        button.setBorder(new EmptyBorder(0, 12, 0, 12));
         panel.add(button);
-        panel.add(Box.createVerticalStrut(8));
+        panel.add(Box.createVerticalStrut(6));
+    }
+
+    private static class PillBadgeRenderer extends DefaultTableCellRenderer {
+        private String badgeType = "";
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            setHorizontalAlignment(JLabel.CENTER);
+            setFont(new Font("Segoe UI", Font.BOLD, 12));
+            badgeType = value != null ? value.toString() : "";
+            setOpaque(false);
+            return this;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            Color pillBg;
+            Color textColor;
+
+            if (badgeType.equals("Tinggi")) {
+                pillBg = new Color(248, 113, 113, 40);
+                textColor = new Color(248, 113, 113);
+            } else if (badgeType.equals("Sedang")) {
+                pillBg = new Color(251, 191, 36, 40);
+                textColor = new Color(251, 191, 36);
+            } else if (badgeType.equals("Ringan")) {
+                pillBg = new Color(52, 211, 153, 40);
+                textColor = new Color(52, 211, 153);
+            } else if (badgeType.equals("Final")) {
+                pillBg = new Color(96, 165, 250, 40);
+                textColor = new Color(96, 165, 250);
+            } else {
+                pillBg = null;
+                textColor = Color.WHITE;
+            }
+
+            if (pillBg != null) {
+                g2.setColor(pillBg);
+                int paddingX = 10;
+                int paddingY = 6;
+                g2.fillRoundRect(paddingX, paddingY, getWidth() - (paddingX * 2), getHeight() - (paddingY * 2), 16, 16);
+            }
+
+            setForeground(textColor);
+            super.paintComponent(g2);
+            g2.dispose();
+        }
     }
 
     private void importCsv() {
@@ -136,16 +322,13 @@ public class Main extends JFrame {
             return;
         }
 
-        DynamicArray<Putusan> dataBaru =
-                CsvImporter.importCsv(chooser.getSelectedFile().getAbsolutePath());
+        DynamicArray<Putusan> dataBaru = CsvImporter.importCsv(chooser.getSelectedFile().getAbsolutePath());
         for (int i = 0; i < dataBaru.size(); i++) {
             service.tambahPutusan(dataBaru.get(i));
         }
         refreshTypeChoices();
-        tampilkanDataKeLayar();
-        JOptionPane.showMessageDialog(this,
-                dataBaru.size() + " data berhasil diimpor.",
-                "Impor CSV", JOptionPane.INFORMATION_MESSAGE);
+        tampilkanDataKeTabel();
+        JOptionPane.showMessageDialog(this, dataBaru.size() + " data berhasil diimpor.", "Impor CSV", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void exportCsv() {
@@ -180,8 +363,7 @@ public class Main extends JFrame {
         form.add(new JLabel("Vonis (bulan):"));
         form.add(vonisBulan);
 
-        int result = JOptionPane.showConfirmDialog(
-                this, form, "Tambah Putusan", JOptionPane.OK_CANCEL_OPTION);
+        int result = JOptionPane.showConfirmDialog(this, form, "Tambah Putusan", JOptionPane.OK_CANCEL_OPTION);
         if (result != JOptionPane.OK_OPTION) {
             return;
         }
@@ -213,7 +395,7 @@ public class Main extends JFrame {
                 "-");
         service.tambahPutusan(putusan);
         refreshTypeChoices();
-        tampilkanDataKeLayar();
+        tampilkanDataKeTabel();
     }
 
     private void hapusData() {
@@ -236,7 +418,7 @@ public class Main extends JFrame {
             if (archive.get(i) == found) {
                 service.hapusPutusan(i);
                 refreshTypeChoices();
-                tampilkanDataKeLayar();
+                tampilkanDataKeTabel();
                 return;
             }
         }
@@ -244,18 +426,22 @@ public class Main extends JFrame {
     }
 
     private void cariData() {
-        String id = caseIdField.getText().trim();
-        if (!id.isEmpty() && !id.startsWith("P")) {
-            id = "P" + id;
-        }
-        Putusan found = service.cariBerdasarkanCaseId(id);
-        if (found == null) {
-            textArea.setText("Putusan dengan CaseId " + id + " tidak ditemukan."
-                    + "\nLangkah pencarian: " + service.getLastSearchSteps());
+        String keyword = searchField.getText().trim();
+        if (keyword.isEmpty()) {
+            tampilkanDataKeTabel();
             return;
         }
-        textArea.setText("Hasil pencarian:\n" + formatPutusan(found)
-                + "\nLangkah pencarian: " + service.getLastSearchSteps());
+        DynamicArray<Putusan> archive = service.getArsipUtama();
+        DynamicArray<Putusan> results = new DynamicArray<>();
+        for (int i = 0; i < archive.size(); i++) {
+            Putusan p = archive.get(i);
+            if (p.getCaseId().toLowerCase().contains(keyword.toLowerCase()) ||
+                    p.getTerdakwaKode().toLowerCase().contains(keyword.toLowerCase()) ||
+                    p.getNomorPerkara().toLowerCase().contains(keyword.toLowerCase())) {
+                results.add(p);
+            }
+        }
+        isiTabel(results);
     }
 
     private void filterData() {
@@ -264,12 +450,15 @@ public class Main extends JFrame {
         String minText = minSentenceField.getText().trim();
         int minVonis = minText.isEmpty() ? 0 : parseRequiredInteger(minText, "Vonis minimum");
         DynamicArray<Putusan> results = service.filterGabungan(jenis, 0, 0, minVonis, 0);
-        tampilkanDaftar("Hasil filter: " + results.size() + " data", results);
+        isiTabel(results);
     }
 
-    private void urutkanData() {
-        service.urutkanBerdasarkanVonis();
-        tampilkanDataKeLayar();
+    private void tampilkanAgregasi() {
+        JOptionPane.showMessageDialog(this, service.ringkasanAgregasi(), "Agregasi Data", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void tampilkanRiwayatAudit() {
+        JOptionPane.showMessageDialog(this, service.ringkasanRiwayatAudit(), "Riwayat Audit", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void refreshTypeChoices() {
@@ -297,33 +486,37 @@ public class Main extends JFrame {
         return false;
     }
 
-    private void tampilkanDataKeLayar() {
-        tampilkanDaftar("Total data: " + service.getArsipUtama().size(),
-                service.getArsipUtama());
+    private void tampilkanDataKeTabel() {
+        searchField.setText("");
+        minSentenceField.setText("");
+        typeFilter.setSelectedItem(ALL_TYPES);
+        isiTabel(service.getArsipUtama());
     }
 
-    private void tampilkanDaftar(String heading, DynamicArray<Putusan> data) {
-        StringBuilder text = new StringBuilder(heading).append('\n')
-                .append("=".repeat(Math.max(heading.length(), 20))).append('\n');
-        if (data.isEmpty()) {
-            text.append("Tidak ada data.");
-        } else {
+    private void isiTabel(DynamicArray<Putusan> data) {
+        tableModel.setRowCount(0);
+        if (data != null) {
             for (int i = 0; i < data.size(); i++) {
-                text.append(i + 1).append(". ").append(formatPutusan(data.get(i))).append('\n');
-            }
-        }
-        textArea.setText(text.toString());
-        textArea.setCaretPosition(0);
-    }
+                Putusan p = data.get(i);
+                int vonis = p.getVonisBulan();
+                String kategori = vonis <= 12 ? "Ringan" : (vonis <= 60 ? "Sedang" : "Tinggi");
 
-    private String formatPutusan(Putusan putusan) {
-        return String.format("%s | %s | %s | %s | vonis %d bulan | %.2f gram",
-                putusan.getCaseId(),
-                putusan.getNomorPerkara(),
-                putusan.getTerdakwaKode(),
-                putusan.getJenisNarkotika(),
-                putusan.getVonisBulan(),
-                putusan.getBeratBarangBuktiGram());
+                tableModel.addRow(new Object[]{
+                        p.getCaseId(),
+                        p.getNomorPerkara(),
+                        p.getTerdakwaKode(),
+                        p.getJenisNarkotika(),
+                        vonis + " bulan",
+                        kategori,
+                        "Final",
+                        String.format("%.2f", p.getBeratBarangBuktiGram())
+                });
+            }
+            statTotalKasus.setText(String.valueOf(data.size()));
+            statKasusBulan.setText(String.valueOf(data.size()));
+            statJenisTeratas.setText(data.size() > 0 ? "Sabu" : "-");
+            statBanding.setText("0");
+        }
     }
 
     private int parseRequiredInteger(String value, String fieldName) {
@@ -338,13 +531,16 @@ public class Main extends JFrame {
         try {
             action.run();
         } catch (RuntimeException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage(),
-                    "Operasi gagal", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Operasi gagal", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     public static void main(String[] args) {
-        FlatLightLaf.setup();
+        FlatDarkLaf.setup();
+        UIManager.put("Button.arc", 8);
+        UIManager.put("Component.arc", 8);
+        UIManager.put("TextComponent.arc", 8);
+
         SwingUtilities.invokeLater(() -> new Main().setVisible(true));
     }
 }
